@@ -42,14 +42,9 @@ class UsersModel
 
         $stmt->bindParam(':username', $this->username);
         $stmt->bindParam(':email', $this->email);
-        // $stmt->bindParam(':role', $this->role);
-        // $stmt->bindParam(':created_at', $this->created_at);
-
-
+       
         $stmt->execute();
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        // var_dump($employee); die();
-
         if ($user) {
             throw new Error("Some of the inputs is registered to another user!");
         }
@@ -146,7 +141,6 @@ class UsersModel
         $stmt->execute();
 
         $vendor = $stmt->fetch(PDO::FETCH_ASSOC);
-        // var_dump($vendor); die();
 
         if (!$vendor) {
             throw new Error("Vendor not found");

@@ -2,6 +2,7 @@
 namespace Main\Controller;
 
 use Main\Model\CommentsModel;
+use Main\Utils\tokenUtils;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
 use Throwable;
@@ -12,15 +13,16 @@ class commentsController{
     public function addComment(Request $request, Response $response, array $args)
 {
     try {
-        $videoId = $request->getAttribute('id');
-        $userId = $request->getAttribute('user_id'); 
-        $body = json_decode($request->getBody()->getContents(), true);
-        $commentText = $body['comment'] ?? null;
+       
+        $reqbody = json_decode($request->getBody()->getContents(), true);
+        $commentText = $reqbody['commentText'] ?? null;
+        $user_id=$reqbody['user_id']?? null;
+        $video_id=$reqbody['video_id']?? null;
 
         $commentModel = new CommentsModel();
-        $commentModel->video_id = $videoId;
-        $commentModel->user_id = $userId;
-        $commentModel->comment_text = $commentText;
+        $commentModel->video_id = $video_id;
+        $commentModel->user_id = $user_id;
+        $commentModel->commentText = $commentText;
 
         $comments = $commentModel->add();
 
@@ -38,7 +40,7 @@ class commentsController{
 public function getComments(Request $request, Response $response, array $args)
 {
     try {
-        $videoId = $args['id'];
+        $video_id = $request->getAttribute('video_id');
 
         $commentModel = new CommentsModel();
         $comments = $commentModel->getByVideoId();
@@ -59,14 +61,17 @@ public function getComments(Request $request, Response $response, array $args)
 public function deleteComment(Request $request, Response $response, array $args)
 {
     try {
-        $commentId = $args['comment_id'];
-        $userId = $request->getAttribute('user_id'); 
-
+        // $id = $args['id']; 
+        // $id = $request->getAttribute('id');
+        $id = $request->getAttribute('id'); 
         $commentModel = new CommentsModel();
+        // $commentModel->user_id=$user_id;
+        $commentModel->id=$id;
 
-        $result = $commentModel->delete($commentId);
 
-        $response->getBody()->write(json_encode($result));
+        $deleted= $commentModel->delete();
+
+        $response->getBody()->write(json_encode($deleted));
         return $response
         ->withHeader('Content-Type', 'application/json')
         ->withStatus(200);

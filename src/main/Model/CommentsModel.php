@@ -11,7 +11,7 @@ class CommentsModel
     public $id;
     public $username;
     public $commentText;
-    public $videoId;
+    public $video_id;
     public $email;
     public $user_id;
     public $created_at;
@@ -28,48 +28,66 @@ class CommentsModel
 
     public function add()
     {
-        if (!$this->videoId || !$this->user_id || !$this->commentText) {
+        $sql = "SELECT id FROM videos";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        $videoResult = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $sql = "SELECT id FROM users ";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        $userdata = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$this->video_id || !$this->user_id || !$this->commentText) {
             throw new Exception("Missing required fields.");
         }
 
-        $sql = "INSERT INTO comments (video_id, user_id, comment_text) VALUES (:videoId, :user_id, :commentText)";
+        $sql = "INSERT INTO comments (video_id, user_id, commentText, created_at) VALUES (:video_id, :user_id, :commentText, :created_at)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':video_id', $this->videoId);
+        $stmt->bindParam(':video_id', $this->video_id);
         $stmt->bindParam(':user_id', $this->user_id);
-        $stmt->bindParam(':comment_text', $this->commentText);
+        $stmt->bindParam(':commentText', $this->commentText);
+        $stmt->bindParam(':created_at', $this->created_at);
+
         $stmt->execute();
 
-        return [
-            "message" => "Comment added successfully",
-        ];
+        $sql = "SELECT id, video_id, user_id, created_at FROM " . $this->dbtable . " WHERE video_id=:video_id";
+        $stmt = $this->conn->prepare($sql);
+
+        $stmt->bindParam(':video_id', $this->video_id);
+        $stmt->execute();
+        $comment = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $comment;
+
     }
     public function getByVideoId()
-{
-    $sql = "SELECT c.id, c.commentText, c.created_at, u.username
-            FROM comments c
-            JOIN users u ON c.user_id = u.id
-            WHERE c.videoId = :videoId
-            ORDER BY c.created_at DESC";
+    {
+        $sql = "SELECT id FROM videos";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        $videoResult = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $stmt = $this->conn->prepare($sql);
-    $stmt->bindParam(':video_id', $videoId);
-    $stmt->execute();
+        $sql = "SELECT id,user_id,video_id, commentText, created_at FROM comments";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        $videoResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
 
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-public function delete($commentId)
-{
-    // Check if user owns the comment
-    $sql = "DELETE FROM comments WHERE id = :id AND user_id = :user_id";
-    $stmt = $this->conn->prepare($sql);
-    $stmt->bindParam(':id', $commentId);
-    $stmt->bindParam(':user_id', $userId);
-    $stmt->execute();
-
-    if ($stmt->rowCount() === 0) {
-        throw new Exception("Comment not found or you're not authorized to delete it.");
+        $getComment = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $getComment;
     }
+    public function delete()
+    {
+        // Check if user owns the comment
+    {
+        $sql = "DELETE FROM comments WHERE id=:id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
 
-    return [];
-}
+        return [];
+
+    }
+    }
 }

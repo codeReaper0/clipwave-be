@@ -22,7 +22,6 @@ class UsersController
             $email = $userReqData['email'] ?? null;
             $password = $userReqData['password'] ?? null;
             $role = $userReqData['role'] ?? null;
-            // $created_at = $userReqData['created_at'] ?? null;
 
             $usersModel = new UsersModel();
 
@@ -30,7 +29,6 @@ class UsersController
             $usersModel->email = $email;
             $usersModel->password = $password;
             $usersModel->role = $role;
-            // $usersModel->created_at = $created_at;
 
             $userVendor = $usersModel->signup();
 

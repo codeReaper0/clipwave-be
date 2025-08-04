@@ -1,31 +1,29 @@
 <?php
-
-
 namespace Main\routes;
+
 use Main\Controller\LikesController;
 use Slim\Routing\RouteCollectorProxy;
 
-isset($protectedLikesGroup) && $protectedLikesGroup->group(
-    '/videos', 
+isset($protectedUsersGroup) && $protectedUsersGroup->group(
+    '/likes',
     function (RouteCollectorProxy $likeGroup) {
 
-    $likeGroup->post(
-        "/toggle/likes",
-        LikesController::class . ":toggleLikes"
-    );
-    $likeGroup->get(
-        "/get/likes/count",
-        LikesController::class . ":getLikesCount"
-    );
-    $likeGroup->delete(
-        "/has/UserLiked",
-        LikesController::class . ":hasUserLiked"
-    );
+        $likeGroup->post(
+            "/toggle/like",
+            LikesController::class . ":toggleLike"
+        );
+        $likeGroup->get(
+            "/get/likes/count/{video_id}",
+            LikesController::class . ":getLikesCount"
+        );
+        $likeGroup->get(
+            "/has/UserLiked",
+            LikesController::class . ":hasUserLiked"
+        );
 
-    $likeGroup->delete(
-        "/get/UserLiked/video",
-        LikesController::class . ":getUserLikedVideo"
-    );
+        $likeGroup->get(
+            "/get/user/whoLiked/{video_id}",
+            LikesController::class . ":getUserWhoLiked"
+        );
 
- 
-});
+    });

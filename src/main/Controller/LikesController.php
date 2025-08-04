@@ -2,6 +2,7 @@
 namespace Main\Controller;
 
 use Main\Model\LikesModel;
+use Main\Utils\tokenUtils;
 use PDOException;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
@@ -13,13 +14,14 @@ class LikesController
     public function toggleLike(Request $request, Response $response)
     {
         try {
-            $userId = $request->getAttribute('user_id');
+            // $userId = $request->getAttribute('user_id');
             $reqdata = (array) json_decode($request->getBody()->getContents(), true);
-            $videoId = $reqdata['video_id'] ?? null;
+            $video_id = $reqdata['video_id'] ?? null;
+            $user_id = $reqdata['user_id'] ?? null;
 
             $likeModel = new LikesModel();
-            $likeModel->user_id = $userId;
-            $likeModel->video_id = $videoId;
+            $likeModel->user_id = $user_id;
+            $likeModel->video_id = $video_id;
 
             $result = $likeModel->toggleLike();
 
@@ -40,12 +42,17 @@ class LikesController
     public function getLikesCount(Request $request, Response $response, array $args): Response
     {
         try {
+            $video_id = $request->getAttribute('video_id');
+
             $likeModel = new LikesModel();
-            $likeModel->video_id = $args['video_id'];
+            $likeModel->video_id = $video_id;
 
-            $count = $likeModel->countLikes();
+            $likesCount = $likeModel->countLikes();
 
-            $response->getBody()->write(json_encode(['video_id' => $likeModel->video_id, 'likes' => $count]
+            $response->getBody()->write(json_encode(["message" => 'likes count retrieved successfully', 'data' => [
+                'video_id' => $video_id,
+                'likes_count' => $likesCount],
+            ]
             ));
             return $response->withHeader('content-type', 'application/json')->withStatus(200);
         } catch (PDOException | Throwable $err) {
@@ -84,16 +91,22 @@ class LikesController
         }
     }
 
-    public function getUserLikedVideos(Request $request, Response $response): Response
+    public function getUserWhoLiked(Request $request, Response $response): Response
     {
         try {
-            $userId = $request->getAttribute('user_id');
-            $likeModel = new Like();
-            $likeModel->user_id = $userId;
+            $video_id = $request->getAttribute('video_id');
 
-            $videos = $likeModel->getUserLikedVideos();
+            $tokenUtils = new tokenUtils();
+            $userData = $tokenUtils->extractDataFromToken($request);
+            $user_id = $userData->id;
 
-            $response->getBody()->write(json_encode(['liked_videos' => $videos]
+            $likeModel = new LikesModel();
+            $likeModel->user_id = $user_id;
+            $likeModel->video_id = $video_id;
+
+            $getUsers = $likeModel->getUsersWhoLiked();
+
+            $response->getBody()->write(json_encode([$getUsers]
             ));
             return $response->withHeader('content-type', 'application/json')
                 ->withStatus(200);

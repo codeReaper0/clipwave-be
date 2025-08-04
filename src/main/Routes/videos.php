@@ -1,7 +1,5 @@
 <?php
 
-
-
 namespace Main\routes;
 
 use Main\Controller\VideosController;
@@ -12,24 +10,24 @@ isset($protectedUsersGroup) && $protectedUsersGroup->group(
     function (RouteCollectorProxy $videoGroup) {
 
     $videoGroup->post(
-        "/upload",
-        VideosController::class . ":upload"
+        "/upload/video",
+        VideosController::class . ":uploadVideo"
     );
     $videoGroup->get(
         "/get/all/videos",
         VideosController::class . ":getAllVideos"
     );
     $videoGroup->get(
-        "/search/videos",
-        VideosController::class . ":searchVideos"
+        "/search/video",
+        VideosController::class . ":searchVideo"
     );
     $videoGroup->get(
-        "/get/video",
+        "/get/video/{id}",
         VideosController::class . ":getVideo"
     );
-    $videoGroup->post(
-        "/like/video",
-        VideosController::class . ":likeVideo"
+    $videoGroup->delete(
+        "/delete/video/{video_id}",
+        VideosController::class . ":deleteVideo"
     );
 
 
