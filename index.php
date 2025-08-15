@@ -11,10 +11,10 @@ use Main\Middleware\CORSMiddleware;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
-// Create App
+// Create Slim app
 $app = AppFactory::create();
 
-// Add CORS middleware - MUST be added before routing middleware
+// Add CORS middleware FIRST
 $app->add(new CORSMiddleware());
 
 // Add routing middleware
@@ -22,9 +22,11 @@ $app->addRoutingMiddleware();
 
 // Add error middleware
 $app->addErrorMiddleware(true, true, true);
+
+// Example route
 $app->post('/cloudinary/signature', \Main\Controller\SignatureController::class . ':generateSignature');
 
-// Register routes
+// Register other routes
 require __DIR__ . '/src/main/Routes/users.php';
 
 // Catch-all route for undefined endpoints
@@ -39,5 +41,5 @@ $app->map(
 	}
 );
 
-// Run the application
+// Run app
 $app->run();
