@@ -1,5 +1,4 @@
 <?php
-
 namespace Main\Model;
 
 use Exception;
@@ -8,86 +7,89 @@ use PDO;
 
 class CommentsModel
 {
-    public $id;
-    public $username;
-    public $commentText;
-    public $video_id;
-    public $email;
-    public $user_id;
-    public $created_at;
+	public $id;
+	public $commentText;
+	public $video_id;
+	public $user_id;
+	public $created_at;
 
-    public $conn;
+	public $conn;
+	public $dbtable = "comments";
 
-    public $dbtable = "comments";
+	public function __construct()
+	{
+		$database = new DB();
+		$this->conn = $database->conn();
+	}
 
-    public function __construct()
-    {
-        $database = new DB();
-        $this->conn = $database->conn();
-    }
+	public function add()
+	{
+		$sql = "INSERT INTO comments (video_id, user_id, comment_text, created_at) 
+                VALUES (:video_id, :user_id, :commentText, NOW())
+                RETURNING id, video_id, user_id, comment_text, created_at";
 
-    public function add()
-    {
-        $sql = "SELECT id FROM videos";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $videoResult = $stmt->fetch(PDO::FETCH_ASSOC);
+		$stmt = $this->conn->prepare($sql);
+		$stmt->execute([
+			':video_id' => $this->video_id,
+			':user_id' => $this->user_id,
+			':commentText' => $this->commentText
+		]);
 
-        $sql = "SELECT id FROM users ";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $userdata = $stmt->fetch(PDO::FETCH_ASSOC);
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
 
-        if (!$this->video_id || !$this->user_id || !$this->commentText) {
-            throw new Exception("Missing required fields.");
-        }
+	public function getByVideoId($video_id)
+	{
+		$sql = "SELECT c.*, u.username 
+                FROM comments c
+                JOIN users u ON c.user_id = u.id
+                WHERE c.video_id = :video_id
+                ORDER BY c.created_at DESC";
 
-        $sql = "INSERT INTO comments (video_id, user_id, commentText, created_at) VALUES (:video_id, :user_id, :commentText, :created_at)";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':video_id', $this->video_id);
-        $stmt->bindParam(':user_id', $this->user_id);
-        $stmt->bindParam(':commentText', $this->commentText);
-        $stmt->bindParam(':created_at', $this->created_at);
+		$stmt = $this->conn->prepare($sql);
+		$stmt->execute([':video_id' => $video_id]);
 
-        $stmt->execute();
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
 
-        $sql = "SELECT id, video_id, user_id, created_at FROM " . $this->dbtable . " WHERE video_id=:video_id";
-        $stmt = $this->conn->prepare($sql);
+	public function delete()
+	{
+		$sql = "DELETE FROM comments WHERE id = :id RETURNING video_id";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->execute([':id' => $this->id]);
 
-        $stmt->bindParam(':video_id', $this->video_id);
-        $stmt->execute();
-        $comment = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $comment;
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
 
-    }
-    public function getByVideoId()
-    {
-        $sql = "SELECT id FROM videos";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $videoResult = $stmt->fetch(PDO::FETCH_ASSOC);
+	public function belongsToUser($user_id)
+	{
+		$sql = "SELECT 1 FROM comments WHERE id = :id AND user_id = :user_id";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->execute([
+			':id' => $this->id,
+			':user_id' => $user_id
+		]);
 
-        $sql = "SELECT id,user_id,video_id, commentText, created_at FROM comments";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-        $videoResult = $stmt->fetch(PDO::FETCH_ASSOC);
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
+		return $stmt->rowCount() > 0;
+	}
 
-        $getComment = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $getComment;
-    }
-    public function delete()
-    {
-        // Check if user owns the comment
-    {
-        $sql = "DELETE FROM comments WHERE id=:id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $id);
-        $stmt->execute();
+	public function getVideoId()
+	{
+		$sql = "SELECT video_id FROM comments WHERE id = :id";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->execute([':id' => $this->id]);
 
-        return [];
+		$result = $stmt->fetch(PDO::FETCH_ASSOC);
+		return $result['video_id'] ?? null;
+	}
 
-    }
-    }
+	public function getCommentCount($video_id)
+	{
+		$sql = "SELECT COUNT(*) as count FROM comments WHERE video_id = :video_id";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->execute([':video_id' => $video_id]);
+
+		$result = $stmt->fetch(PDO::FETCH_ASSOC);
+		return $result['count'] ?? 0;
+	}
 }

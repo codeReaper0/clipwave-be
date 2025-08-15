@@ -1,56 +1,62 @@
 <?php
-
 namespace Main\Utils;
 
-use Error;
-use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use Throwable;
-use UnexpectedValueException;
+use Exception;
 
-class tokenUtils
+class TokenUtils
 {
-    public function extractDataFromToken($request)
-    {
-        $token = $request->getHeader("Authorization")[0] ?? null;
-        if (!$token) {
-            throw new Error("Authentication failed 0");
-        }
+	private $secretKey;
+	private $algorithm = 'HS512';
 
-        $splittedToken = explode(" ", $token);
-        
-        $tokenType = $splittedToken[0] ?? null;
+	public function __construct()
+	{
+		$this->secretKey = $_ENV['JWT_SECRET'];
+	}
 
-        $accessToken = $splittedToken[1] ?? null;
+	public function generateToken(array $payload): string
+	{
+		$issuedAt = time();
+		$expirationTime = $issuedAt + 3600; // 1 hour expiration
 
-        if (!$tokenType || !$accessToken) {
-            throw new Error("Authentication failed 1");
-        }
+		$payload = array_merge($payload, [
+			'iat' => $issuedAt,
+			'exp' => $expirationTime
+		]);
 
-         $payload = null;
+		return JWT::encode($payload, $this->secretKey, $this->algorithm);
+	}
 
-        if ($tokenType === "Bearer") {
-            //verify token
-            $key = $_ENV["AUTH_KEY"];
+	public function extractDataFromToken($request): object
+	{
+		$authHeader = $request->getHeaderLine('Authorization');
 
-            try {
-                $payload = JWT::decode($accessToken, new Key($key, "HS512"));
-            } catch (UnexpectedValueException $error) {
-                throw new Error("Authentication failed 4");
-            } catch (ExpiredException $error) {
-                throw new Error("Expired token");
-            } catch (Throwable $error) {
-            
-            }
+		if (empty($authHeader)) {
+			throw new Exception("Authorization header missing");
+		}
 
-            if (!$payload) {
-                throw new Error("Authentication failed 2");
-            }
-        } else {
-            throw new Error("Authentication failed 3");
-        }
+		if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+			throw new Exception("Token not found in header");
+		}
 
-        return $payload;
-    }
+		$token = $matches[1];
+
+		try {
+			$decoded = JWT::decode($token, new Key($this->secretKey, $this->algorithm));
+			return $decoded;
+		} catch (Exception $e) {
+			throw new Exception("Invalid token: " . $e->getMessage());
+		}
+	}
+
+	public function validateToken(string $token): bool
+	{
+		try {
+			JWT::decode($token, new Key($this->secretKey, $this->algorithm));
+			return true;
+		} catch (Exception $e) {
+			return false;
+		}
+	}
 }

@@ -6,34 +6,31 @@ use Main\Controller\VideosController;
 use Slim\Routing\RouteCollectorProxy;
 
 isset($protectedUsersGroup) && $protectedUsersGroup->group(
-    '/videos', 
-    function (RouteCollectorProxy $videoGroup) {
+	'/videos',
+	function (RouteCollectorProxy $videoGroup) {
 
-    $videoGroup->post(
-        "/upload/video",
-        VideosController::class . ":uploadVideo"
-    );
-    $videoGroup->get(
-        "/get/all/videos",
-        VideosController::class . ":getAllVideos"
-    );
-    $videoGroup->get(
-        "/search/video",
-        VideosController::class . ":searchVideo"
-    );
-    $videoGroup->get(
-        "/get/video/{id}",
-        VideosController::class . ":getVideo"
-    );
-    $videoGroup->delete(
-        "/delete/video/{video_id}",
-        VideosController::class . ":deleteVideo"
-    );
-
-
-
- 
-});
+		$videoGroup->post(
+			"/upload",
+			VideosController::class . ":uploadVideo"
+		);
+		$videoGroup->get(
+			"/all",
+			VideosController::class . ":getAllVideos"
+		);
+		$videoGroup->get(
+			"/search",
+			VideosController::class . ":searchVideo"
+		);
+		$videoGroup->get(
+			"/{id}",
+			VideosController::class . ":getVideo"
+		);
+		$videoGroup->delete(
+			"/{video_id}",
+			VideosController::class . ":deleteVideo"
+		);
+	}
+);
 
 
 ?>

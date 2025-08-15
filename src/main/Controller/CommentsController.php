@@ -1,4 +1,4 @@
-<?php 
+<?php
 namespace Main\Controller;
 
 use Main\Model\CommentsModel;
@@ -6,83 +6,108 @@ use Main\Utils\tokenUtils;
 use Slim\Psr7\Request;
 use Slim\Psr7\Response;
 use Throwable;
-class commentsController{
 
-
-
-    public function addComment(Request $request, Response $response, array $args)
+class CommentsController
 {
-    try {
-       
-        $reqbody = json_decode($request->getBody()->getContents(), true);
-        $commentText = $reqbody['commentText'] ?? null;
-        $user_id=$reqbody['user_id']?? null;
-        $video_id=$reqbody['video_id']?? null;
+	private function jsonResponse(Response $response, array $data, int $status = 200): Response
+	{
+		$response->getBody()->write(json_encode($data));
+		return $response
+			->withHeader('Content-Type', 'application/json')
+			->withStatus($status);
+	}
 
-        $commentModel = new CommentsModel();
-        $commentModel->video_id = $video_id;
-        $commentModel->user_id = $user_id;
-        $commentModel->commentText = $commentText;
+	public function addComment(Request $request, Response $response)
+	{
+		try {
+			$reqbody = json_decode($request->getBody()->getContents(), true);
+			$content = $reqbody['content'] ?? null;
+			$user_id = $reqbody['user_id'] ?? null;
+			$video_id = $reqbody['video_id'] ?? null;
 
-        $comments = $commentModel->add();
+			if (!$content || !$user_id || !$video_id) {
+				throw new \Exception("All fields are required");
+			}
 
-        $response->getBody()->write(json_encode($comments));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
+			$commentModel = new CommentsModel();
+			$commentModel->video_id = $video_id;
+			$commentModel->user_id = $user_id;
+			$commentModel->user_id = $user_id;
+			$commentModel->commentText = $content;
 
-    } catch (Throwable $err) {
-        $error = [
-            "message" => $err->getMessage()
-        ];
-        $response->getBody()->write(json_encode($error));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
-    }
-}
-public function getComments(Request $request, Response $response, array $args)
-{
-    try {
-        $video_id = $request->getAttribute('video_id');
+			$comment = $commentModel->add();
 
-        $commentModel = new CommentsModel();
-        $comments = $commentModel->getByVideoId();
+			return $this->jsonResponse($response, [
+				'success' => true,
+				'comment' => $comment,
+				'comment_count' => $commentModel->getCommentCount($video_id)
+			]);
 
-        $response->getBody()->write(json_encode($comments));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
-    } catch (Throwable $err) {
-        $error = [
-            "message" => $err->getMessage()
-        
-        ];
-        $response->getBody()->write(json_encode($error));
-        return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus(400);
-    }
-}
-public function deleteComment(Request $request, Response $response, array $args)
-{
-    try {
-        // $id = $args['id']; 
-        // $id = $request->getAttribute('id');
-        $id = $request->getAttribute('id'); 
-        $commentModel = new CommentsModel();
-        // $commentModel->user_id=$user_id;
-        $commentModel->id=$id;
+		} catch (Throwable $err) {
+			return $this->jsonResponse($response, [
+				"success" => false,
+				"message" => $err->getMessage()
+			], 400);
+		}
+	}
 
+	public function getComments(Request $request, Response $response, array $args)
+	{
+		try {
+			$video_id = $args['video_id'] ?? null;
 
-        $deleted= $commentModel->delete();
+			if (!$video_id) {
+				throw new \Exception("Video ID is required");
+			}
 
-        $response->getBody()->write(json_encode($deleted));
-        return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus(200);
-    } catch (Throwable $err) {
-        $error = [
-            "message" => $err->getMessage()
-    ];
-        $response->getBody()->write(json_encode($error));
-        return $response
-        ->withHeader('Content-Type', 'application/json')
-        ->withStatus(400);
-    }
-}
+			$commentModel = new CommentsModel();
+			$comments = $commentModel->getByVideoId($video_id);
+
+			return $this->jsonResponse($response, [
+				'success' => true,
+				'comments' => $comments
+			]);
+
+		} catch (Throwable $err) {
+			return $this->jsonResponse($response, [
+				"success" => false,
+				"message" => $err->getMessage()
+			], 400);
+		}
+	}
+
+	public function deleteComment(Request $request, Response $response, array $args)
+	{
+		try {
+			$id = $args['id'] ?? null;
+			$user_id = $request->getAttribute('user_id');
+
+			if (!$id) {
+				throw new \Exception("Comment ID is required");
+			}
+
+			$commentModel = new CommentsModel();
+			$commentModel->id = $id;
+
+			// Verify comment belongs to user
+			if (!$commentModel->belongsToUser($user_id)) {
+				throw new \Exception("Unauthorized to delete this comment");
+			}
+
+			$video_id = $commentModel->getVideoId();
+			$deleted = $commentModel->delete();
+
+			return $this->jsonResponse($response, [
+				'success' => true,
+				'deleted' => $deleted,
+				'comment_count' => $commentModel->getCommentCount($video_id)
+			]);
+
+		} catch (Throwable $err) {
+			return $this->jsonResponse($response, [
+				"success" => false,
+				"message" => $err->getMessage()
+			], 400);
+		}
+	}
 }

@@ -12,279 +12,279 @@ use Throwable;
 class UsersController
 {
 
-    public function signUp(Request $request, Response $response)
-    {
-        try {
+	public function signUp(Request $request, Response $response)
+	{
+		try {
 
-            $userReqData = (array) json_decode($request->getBody()->getContents());
+			$userReqData = (array) json_decode($request->getBody()->getContents());
 
-            $username = $userReqData['username'] ?? null;
-            $email = $userReqData['email'] ?? null;
-            $password = $userReqData['password'] ?? null;
-            $role = $userReqData['role'] ?? null;
+			$username = $userReqData['username'];
+			$email = $userReqData['email'];
+			$password = $userReqData['password'];
+			$role = $userReqData['role'];
 
-            $usersModel = new UsersModel();
+			$usersModel = new UsersModel();
 
-            $usersModel->username = $username;
-            $usersModel->email = $email;
-            $usersModel->password = $password;
-            $usersModel->role = $role;
+			$usersModel->username = $username;
+			$usersModel->email = $email;
+			$usersModel->password = $password;
+			$usersModel->role = $role;
 
-            $userVendor = $usersModel->signup();
+			$userVendor = $usersModel->signup();
 
-            //process the response
-            $response->getBody()->write(json_encode($userVendor));
+			//process the response
+			$response->getBody()->write(json_encode($userVendor));
 
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (PDOException $err) {
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (PDOException $err) {
 
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        } catch (Throwable $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        }
-    }
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		} catch (Throwable $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		}
+	}
 
-    public function login(Request $request, Response $response)
-    {
-        try {
-            $userReqData = (array) json_decode($request->getBody()->getContents());
+	public function login(Request $request, Response $response)
+	{
+		try {
+			$userReqData = (array) json_decode($request->getBody()->getContents());
 
-            $username = $userReqData['username'];
-            $password = $userReqData['password'];
+			$username = $userReqData['username'];
+			$password = $userReqData['password'];
 
-            $userModel = new UsersModel();
+			$userModel = new UsersModel();
 
-            $userModel->username = $username;
-            $userModel->password = $password;
+			$userModel->username = $username;
+			$userModel->password = $password;
 
-            $userResponseData = $userModel->login();
+			$userResponseData = $userModel->login();
 
-            $response->getBody()->write(json_encode($userResponseData));
+			$response->getBody()->write(json_encode($userResponseData));
 
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (PDOException $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        } catch (Throwable $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(500);
-        }
-    }
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (PDOException $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		} catch (Throwable $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(500);
+		}
+	}
 
-    public function getProfile(Request $request, Response $response)
-    {
-        try {
-            $tokenUtils = new tokenUtils();
-            $userData = $tokenUtils->extractDataFromToken($request);
-            $id = $userData->id;
+	public function getProfile(Request $request, Response $response)
+	{
+		try {
+			$tokenUtils = new tokenUtils();
+			$userData = $tokenUtils->extractDataFromToken($request);
+			$id = $userData->id;
 
-            $user = new UsersModel();
-            $user->id = $id;
-            $userData = $user->getProfile();
+			$user = new UsersModel();
+			$user->id = $id;
+			$userData = $user->getProfile();
 
-            $response->getBody()->write(json_encode($userData));
+			$response->getBody()->write(json_encode($userData));
 
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (PDOException $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        } catch (Throwable $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        }
-    }
-    public function updateProfile(Request $request, Response $response)
-    {
-        try {
-            $tokenUtils = new tokenUtils();
-            $userData = $tokenUtils->extractDataFromToken($request);
-            $id = $userData->id;
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (PDOException $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		} catch (Throwable $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		}
+	}
+	public function updateProfile(Request $request, Response $response)
+	{
+		try {
+			$tokenUtils = new tokenUtils();
+			$userData = $tokenUtils->extractDataFromToken($request);
+			$id = $userData->id;
 
-            $userReqData = (array) json_decode($request->getBody()->getContents());
+			$userReqData = (array) json_decode($request->getBody()->getContents());
 
-            $username = $userReqData['username'] ?? null;
-            $email = $userReqData['email'] ?? null;
-            $role = $userReqData['role'] ?? null;
+			$username = $userReqData['username'] ?? null;
+			$email = $userReqData['email'] ?? null;
+			$role = $userReqData['role'] ?? null;
 
-            $user = new UsersModel();
+			$user = new UsersModel();
 
-            $user->id = $id;
-            $user->username = $username;
-            $user->email = $email;
-            $user->role = $role;
+			$user->id = $id;
+			$user->username = $username;
+			$user->email = $email;
+			$user->role = $role;
 
-            $updateUser = $user->UpdateProfile();
+			$updateUser = $user->UpdateProfile();
 
-            $response->getBody()->write(json_encode($updateUser));
+			$response->getBody()->write(json_encode($updateUser));
 
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (PDOException $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        }
-    }
-    public function updatePassword(Request $request, Response $response)
-    {
-        try {
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (PDOException $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		}
+	}
+	public function updatePassword(Request $request, Response $response)
+	{
+		try {
 
-            $userReqData = (array) json_decode($request->getBody()->getContents());
-            $oldPassword = $userReqData['oldPassword'];
-            $newPassword = $userReqData['newPassword'];
+			$userReqData = (array) json_decode($request->getBody()->getContents());
+			$oldPassword = $userReqData['oldPassword'];
+			$newPassword = $userReqData['newPassword'];
 
-            $tokenUtils = new TokenUtils();
-            $userData = $tokenUtils->extractDataFromToken($request);
-            $id = $userData->id;
+			$tokenUtils = new TokenUtils();
+			$userData = $tokenUtils->extractDataFromToken($request);
+			$id = $userData->id;
 
-            $user = new UsersModel();
-            $user->id = $id;
-            $userVendor = $user->updatePassword($oldPassword, $newPassword);
+			$user = new UsersModel();
+			$user->id = $id;
+			$userVendor = $user->updatePassword($oldPassword, $newPassword);
 
-            $response->getBody()->write(json_encode($userVendor));
+			$response->getBody()->write(json_encode($userVendor));
 
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (PDOException $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        } catch (Throwable $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        }
-    }
-    public function getAll(Request $request, Response $response)
-    {
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (PDOException $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		} catch (Throwable $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		}
+	}
+	public function getAll(Request $request, Response $response)
+	{
 
-        try {
-            $tokenUtils = new TokenUtils();
-            $adminUserData = $tokenUtils->extractDataFromToken($request);
+		try {
+			$tokenUtils = new TokenUtils();
+			$adminUserData = $tokenUtils->extractDataFromToken($request);
 
-            $getAllUsers = new UsersModel();
+			$getAllUsers = new UsersModel();
 
-            $getAllUsersData = $getAllUsers->getAll();
+			$getAllUsersData = $getAllUsers->getAll();
 
-            $response->getBody()->write(json_encode($getAllUsersData));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (PDOException $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        }
-    }
-    public function logout(Request $request, Response $response)
-    {
-        try {
+			$response->getBody()->write(json_encode($getAllUsersData));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (PDOException $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		}
+	}
+	public function logout(Request $request, Response $response)
+	{
+		try {
 
-            $tokenUtils = new TokenUtils();
-            $userData = $tokenUtils->extractDataFromToken($request);
-            $id = $userData->id;
+			$tokenUtils = new TokenUtils();
+			$userData = $tokenUtils->extractDataFromToken($request);
+			$id = $userData->id;
 
-            $user = new UsersModel();
-            $user->id = $id;
+			$user = new UsersModel();
+			$user->id = $id;
 
-            $user->logout();
+			$user->logout();
 
-            $response->getBody()->write(json_encode(["message" => "logout successful"]));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (PDOException $err) {
-            $err = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($err));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        }
-    }
-    public function deleteProfile(Request $request, Response $response)
-    {
-        try {
-            $tokenUtils = new tokenUtils();
-            $userData = $tokenUtils->extractDataFromToken($request);
-            $id = $userData->id;
+			$response->getBody()->write(json_encode(["message" => "logout successful"]));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (PDOException $err) {
+			$err = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($err));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		}
+	}
+	public function deleteProfile(Request $request, Response $response)
+	{
+		try {
+			$tokenUtils = new tokenUtils();
+			$userData = $tokenUtils->extractDataFromToken($request);
+			$id = $userData->id;
 
-            $user = new UsersModel();
-            $user->id = $id;
+			$user = new UsersModel();
+			$user->id = $id;
 
-            $userData = $user->deleteProfile();
+			$userData = $user->deleteProfile();
 
-            $response->getBody()->write(json_encode($userData));
+			$response->getBody()->write(json_encode($userData));
 
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(200);
-        } catch (Throwable $err) {
-            $error = [
-                "message" => $err->getMessage(),
-            ];
-            $response->getBody()->write(json_encode($error));
-            return $response
-                ->withHeader('content-type', 'application/json')
-                ->withStatus(400);
-        }
-    }
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(200);
+		} catch (Throwable $err) {
+			$error = [
+				"message" => $err->getMessage(),
+			];
+			$response->getBody()->write(json_encode($error));
+			return $response
+				->withHeader('content-type', 'application/json')
+				->withStatus(400);
+		}
+	}
 
 }

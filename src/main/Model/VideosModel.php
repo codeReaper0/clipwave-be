@@ -9,181 +9,257 @@ use PDO;
 
 class VideosModel
 {
-    public $conn;
-    public $id;
-    public $user_id;
-    public $video_id;
-    public $title;
-    public $genre;
-    public $age_rating;
-    public $filename;
-    public $video_url;
-    public $videoFile;
-    public $thumbnail_url;
-    public $publisher;
-    public $producer;
-    public $uploaded_at;
+	public $conn;
+	public $id;
+	public $user_id;
+	public $video_id;
+	public $title;
+	public $genre;
+	public $age_rating;
+	public $filename;
+	public $video_url;
+	public $videoFile;
+	public $thumbnail_url;
+	public $publisher;
+	public $producer;
+	public $uploaded_at;
+	public $cloudinary_id;
+	public $description;
+	public $duration;
+	public $format;
+	public $hls_url;
 
-    public function __construct()
-    {
-        $db = new DB();
-        $this->conn = $db->conn();
-    }
+	public function __construct()
+	{
+		$db = new DB();
+		$this->conn = $db->conn();
+	}
 
-    public function uploadVideo(array $formData, array $uploadedFiles, int $user_id)
-    {
-        // Required fields
-        $requiredFields = ['title', 'genre', 'age_rating', 'publisher', 'producer'];
+	public function uploadVideo(array $videoData)
+	{
+		$query = "INSERT INTO videos (
+        user_id, 
+        cloudinary_id, 
+        title, 
+        description, 
+        genre, 
+        age_rating, 
+        publisher, 
+        producer, 
+        duration, 
+        format, 
+        video_url, 
+        hls_url, 
+        thumbnail_url
+    ) VALUES (
+        :user_id, 
+        :cloudinary_id, 
+        :title, 
+        :description, 
+        :genre, 
+        :age_rating, 
+        :publisher, 
+        :producer, 
+        :duration, 
+        :format, 
+        :video_url, 
+        :hls_url, 
+        :thumbnail_url
+    ) RETURNING id, user_id, title, description, genre, age_rating, 
+               publisher, producer, duration, format, video_url, 
+               hls_url, thumbnail_url, cloudinary_id, uploaded_at";
 
-        foreach ($requiredFields as $field) {
-            if (empty($formData[$field])) {
-                throw new Exception("Missing required field: $field");
-            }
-        }
-        // Uploaded files
-        if (empty($uploadedFiles['videoFile']) || empty($uploadedFiles['thumbnailFile'])) {
-            throw new Exception("Video and thumbnail files are required.");
-        }
+		$stmt = $this->conn->prepare($query);
+		$stmt->execute([
+			':user_id' => $videoData['user_id'],
+			':cloudinary_id' => $videoData['cloudinary_id'],
+			':title' => $videoData['title'],
+			':description' => $videoData['description'] ?? null,
+			':genre' => $videoData['genre'] ?? null,
+			':age_rating' => $videoData['age_rating'] ?? null,
+			':publisher' => $videoData['publisher'] ?? null,
+			':producer' => $videoData['producer'] ?? null,
+			':duration' => $videoData['duration'],
+			':format' => $videoData['format'],
+			':video_url' => $videoData['video_url'],
+			':hls_url' => $videoData['hls_url'],
+			':thumbnail_url' => $videoData['thumbnail_url'] ?? null
+		]);
 
-        $videoFile = $uploadedFiles['videoFile'];
-        $thumbnailFile = $uploadedFiles['thumbnailFile'];
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
+	private function getVideoById($id)
+	{
+		$sql = "SELECT 
+                v.id, 
+                v.user_id,
+                u.username,
+                v.title, 
+                v.description,
+                v.genre, 
+                v.age_rating, 
+                v.publisher,
+                v.producer,
+                v.video_url, 
+                v.hls_url,
+                v.thumbnail_url,
+                v.cloudinary_id,
+                v.duration,
+                v.format,
+                v.uploaded_at
+            FROM videos v
+            JOIN users u ON v.user_id = u.id
+            WHERE v.id = :id
+            LIMIT 1";
 
-        if ($videoFile->getError() !== UPLOAD_ERR_OK || $thumbnailFile->getError() !== UPLOAD_ERR_OK) {
-            // throw new Exception("Error in file upload.");
-            throw new Exception("Video upload error code: " . $videoFile->getError() .
-                ", Thumbnail upload error code: " . $thumbnailFile->getError() .
-                ", video size: " . $videoFile->getSize() . " bytes");
-        }
+		$stmt = $this->conn->prepare($sql);
+		$stmt->bindValue(':id', $id, PDO::PARAM_INT);
+		$stmt->execute();
 
-        // Upload directory
-        $uploadDir = __DIR__ . '/../../public/uploads/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
+		return $stmt->fetch(PDO::FETCH_ASSOC);
+	}
 
-        // Save video
-        $videoFilename = uniqid() . '_' . $videoFile->getClientFilename();
-        $videoPath = $uploadDir . $videoFilename;
-        $videoFile->moveTo($videoPath);
-        $videoUrl = '/uploads/' . $videoFilename;
+	public function getAllVideos(int $limit = 20, int $offset = 0)
+	{
+		$sql = "SELECT 
+                v.id, 
+                v.user_id,
+                u.username,
+                v.title, 
+                v.description,
+                v.genre, 
+                v.age_rating, 
+                v.publisher,
+                v.producer,
+                v.video_url, 
+                v.hls_url,
+                v.thumbnail_url,
+                v.cloudinary_id,
+                v.duration,
+                v.format,
+                v.uploaded_at,
+                -- Like count
+                (SELECT COUNT(*) FROM likes l WHERE l.video_id = v.id) AS like_count,
+                -- Comment count
+                (SELECT COUNT(*) FROM comments c WHERE c.video_id = v.id) AS comment_count
+            FROM videos v
+            JOIN users u ON v.user_id = u.id
+            ORDER BY v.uploaded_at DESC
+            LIMIT :limit OFFSET :offset";
 
-        // Save thumbnail
-        $thumbFilename = uniqid() . '_' . $thumbnailFile->getClientFilename();
-        $thumbPath = $uploadDir . $thumbFilename;
-        $thumbnailFile->moveTo($thumbPath);
-        $thumbnailUrl = '/uploads/' . $thumbFilename;
+		$stmt = $this->conn->prepare($sql);
+		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+		$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+		$stmt->execute();
 
-        // Save to database
-        $sql = "INSERT INTO videos (
-            title, publisher, producer, genre, age_rating,
-            video_url, thumbnail_url, uploaded_at, user_id
-        ) VALUES (
-            :title, :publisher, :producer, :genre, :age_rating,
-            :video_url, :thumbnail_url, NOW(), :user_id
-        )";
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':title', $formData['title']);
-        $stmt->bindParam(':publisher', $formData['publisher']);
-        $stmt->bindParam(':producer', $formData['producer']);
-        $stmt->bindParam(':genre', $formData['genre']);
-        $stmt->bindParam(':age_rating', $formData['age_rating']);
-        $stmt->bindParam(':video_url', $videoUrl);
-        $stmt->bindParam(':thumbnail_url', $thumbnailUrl);
-        $stmt->bindParam(':user_id', $user_id);
-        $stmt->execute();
 
-        // "message" => "Video uploaded successfully.",
-        $videos = [
-            "title" => $formData['title'],
-            "genre" => $formData['genre'],
-            "publisher" => $formData['publisher'],
-            "producer" => $formData['producer'],
-            "age_rating" => $formData['age_rating'],
-            "video_url" => $videoUrl,
-            "thumbnail_url" => $thumbnailUrl,
+	public function searchVideo($filters, $limit = 10, $offset = 0)
+	{
+		$sql = "SELECT 
+                id,
+                user_id,
+                title,
+                description,
+                genre,
+                age_rating,
+                publisher,
+                producer,
+                video_url,
+                hls_url,
+                thumbnail_url,
+                cloudinary_id,
+                duration,
+                format,
+                uploaded_at
+            FROM videos WHERE 1=1";
 
-        ];
-        return $videos;
-    }
-    public function getAllVideos()
-    {
-        $sql = "SELECT id, title, publisher, genre, age_rating, video_url, uploaded_at
-            FROM videos
-            ORDER BY uploaded_at DESC";
+		$params = [];
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
+		if (!empty($filters['title'])) {
+			$sql .= " AND title LIKE :title";
+			$params[':title'] = "%" . $filters['title'] . "%";
+		}
 
-        $videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $videos;
-    }
+		if (!empty($filters['genre'])) {
+			$sql .= " AND genre = :genre";
+			$params[':genre'] = $filters['genre'];
+		}
 
-    public function searchVideo($filters, $limit = 10, $offset = 0)
-    {
-        $sql = "SELECT * FROM videos WHERE 1=1";
-        $params = [];
+		if (!empty($filters['age_rating'])) {
+			$sql .= " AND age_rating = :age_rating";
+			$params[':age_rating'] = $filters['age_rating'];
+		}
 
-        if (!empty($filters['title'])) {
-            $sql .= " AND title LIKE :title";
-            $params[':title'] = "%" . $filters['title'] . "%";
-        }
+		if (!empty($filters['user_id'])) {
+			$sql .= " AND user_id = :user_id";
+			$params[':user_id'] = $filters['user_id'];
+		}
 
-        if (!empty($filters['genre'])) {
-            $sql .= " AND genre = :genre";
-            $params[':genre'] = $filters['genre'];
-        }
+		$sql .= " ORDER BY uploaded_at DESC LIMIT :limit OFFSET :offset";
 
-        if (!empty($filters['age_rating'])) {
-            $sql .= " AND age_rating = :age_rating";
-            $params[':age_rating'] = $filters['age_rating'];
-        }
+		$stmt = $this->conn->prepare($sql);
 
-        $sql .= " ORDER BY uploaded_at DESC LIMIT :limit OFFSET :offset";
+		foreach ($params as $key => $val) {
+			$stmt->bindValue($key, $val);
+		}
 
-        $stmt = $this->conn->prepare($sql);
+		$stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
+		$stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
 
-        foreach ($params as $key => $val) {
-            $stmt->bindValue($key, $val);
-        }
+		$stmt->execute();
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
 
-        $stmt->bindValue(':limit', (int) $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', (int) $offset, PDO::PARAM_INT);
+	public function getVideo()
+	{
+		$sql = "SELECT 
+                id,
+                user_id,
+                title,
+                description,
+                genre,
+                age_rating,
+                publisher,
+                producer,
+                video_url,
+                hls_url,
+                thumbnail_url,
+                cloudinary_id,
+                duration,
+                format,
+                uploaded_at
+            FROM videos WHERE id = :id";
 
-        $stmt->execute();
-        $searchData = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $searchData;
-    }
-    public function getVideo()
-    {
-        $sql = "SELECT * FROM videos WHERE id=:id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id', $this->id);
-        $stmt->execute();
+		$stmt = $this->conn->prepare($sql);
+		$stmt->bindParam(':id', $this->id, PDO::PARAM_INT);
+		$stmt->execute();
 
-        $video = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$video) {
-            throw new ErrorException("Video not found");
-        }
+		$video = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $getVideo = [
-            "id" => $video["id"],
-            "username" => $video["title"],
+		if (!$video) {
+			throw new ErrorException("Video not found");
+		}
 
-        ];
+		return $video;
+	}
 
-        return $getVideo;
-    }
+	public function deleteVideo()
+	{
+		// First get video info before deleting
+		$video = $this->getVideo();
 
-    public function deleteVideo()
-    {
-        $sql = "DELETE FROM videos WHERE id=:video_id";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':video_id', $video_id);
-        $stmt->execute();
+		$sql = "DELETE FROM videos WHERE id = :video_id";
+		$stmt = $this->conn->prepare($sql);
+		$stmt->bindParam(':video_id', $this->video_id, PDO::PARAM_INT);
+		$stmt->execute();
 
-        return [];
-
-    }
-
+		return [
+			'deleted' => true,
+			'video_id' => $this->video_id,
+			'cloudinary_id' => $video['cloudinary_id']
+		];
+	}
 }
