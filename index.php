@@ -28,7 +28,7 @@ $app->get('/', function (Request $request, Response $response) {
 });
 
 // Include your API routes file
-require __DIR__ . '/routes.php';
+require __DIR__ . '/src/main/Routes/users.php';
 
 // Run the Slim app
 $app->run();
