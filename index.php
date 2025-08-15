@@ -1,49 +1,34 @@
 <?php
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Slim\Factory\AppFactory;
+
 require __DIR__ . '/vendor/autoload.php';
 
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use Slim\Factory\AppFactory;
-use Dotenv\Dotenv;
-use Main\Middleware\CORSMiddleware;
-
-// Load environment variables
-$dotenv = Dotenv::createImmutable(__DIR__);
-$dotenv->safeLoad();
-
-// Create Slim app
 $app = AppFactory::create();
 
-// 1️⃣ Add CORS middleware FIRST so it applies to everything
-$app->add(new CORSMiddleware());
+// Middleware to handle CORS
+$app->add(function (Request $request, $handler) {
+	$response = $handler->handle($request);
+	return $response
+		->withHeader('Access-Control-Allow-Origin', '*')
+		->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+		->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+});
 
-// 2️⃣ Handle all OPTIONS requests BEFORE routing
-$app->options('/{routes:.+}', function (ServerRequestInterface $request, ResponseInterface $response) {
+// Only ONE wildcard OPTIONS route (prevents duplicate registration)
+$app->options('/{routes:.+}', function (Request $request, Response $response) {
 	return $response;
 });
 
-// 3️⃣ Add Slim's routing
-$app->addRoutingMiddleware();
+// Example route
+$app->get('/', function (Request $request, Response $response) {
+	$response->getBody()->write("Backend is running!");
+	return $response;
+});
 
-// 4️⃣ Add Slim's error handler
-$app->addErrorMiddleware(true, true, true);
+// Include your API routes file
+require __DIR__ . '/routes.php';
 
-// 5️⃣ Register your routes
-$app->post('/cloudinary/signature', \Main\Controller\SignatureController::class . ':generateSignature');
-require __DIR__ . '/src/main/Routes/users.php';
-
-// 6️⃣ Fallback for all undefined routes (still returns CORS headers)
-$app->map(
-	['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-	'/{routes:.+}',
-	function (ServerRequestInterface $request, ResponseInterface $response) {
-		$payload = json_encode(["error" => "Endpoint not found"], JSON_UNESCAPED_UNICODE);
-		$response->getBody()->write($payload);
-		return $response
-			->withHeader('Content-Type', 'application/json')
-			->withStatus(404);
-	}
-);
-
-// 7️⃣ Run the app
+// Run the Slim app
 $app->run();
