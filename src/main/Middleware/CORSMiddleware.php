@@ -13,18 +13,18 @@ class CORSMiddleware implements MiddlewareInterface
 	{
 		$origin = $request->getHeaderLine('Origin') ?: '*';
 
-		// Handle preflight OPTIONS request
+		// Preflight request
 		if (strtoupper($request->getMethod()) === 'OPTIONS') {
 			$response = new Response();
-			return $this->addCorsHeaders($response, $origin)->withStatus(204);
+			return $this->withCorsHeaders($response, $origin)->withStatus(204);
 		}
 
-		// Handle normal requests
+		// Regular request
 		$response = $handler->handle($request);
-		return $this->addCorsHeaders($response, $origin);
+		return $this->withCorsHeaders($response, $origin);
 	}
 
-	private function addCorsHeaders(ResponseInterface $response, string $origin): ResponseInterface
+	private function withCorsHeaders(ResponseInterface $response, string $origin): ResponseInterface
 	{
 		return $response
 			->withHeader('Access-Control-Allow-Origin', $origin)
