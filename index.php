@@ -11,16 +11,10 @@ use Main\Middleware\CORSMiddleware;
 $dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
-// Create Slim app
+// Create App
 $app = AppFactory::create();
 
-// Handle all OPTIONS requests before routing (preflight)
-$app->options('/{routes:.+}', function (ServerRequestInterface $request, ResponseInterface $response) {
-	// Just return empty response — CORSMiddleware will add the headers
-	return $response;
-});
-
-// Add CORS middleware FIRST
+// Add CORS middleware - MUST be added before routing middleware
 $app->add(new CORSMiddleware());
 
 // Add routing middleware
@@ -28,25 +22,22 @@ $app->addRoutingMiddleware();
 
 // Add error middleware
 $app->addErrorMiddleware(true, true, true);
-
-// Example route
 $app->post('/cloudinary/signature', \Main\Controller\SignatureController::class . ':generateSignature');
 
-// Register other routes
+// Register routes
 require __DIR__ . '/src/main/Routes/users.php';
 
-// Catch-all route for undefined endpoints (no OPTIONS here)
+// Catch-all route for undefined endpoints
 $app->map(
-	['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+	['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 	'/{routes:.+}',
 	function (ServerRequestInterface $request, ResponseInterface $response) {
-		$payload = json_encode(["error" => "Endpoint not found"], JSON_UNESCAPED_UNICODE);
-		$response->getBody()->write($payload);
+		$response->getBody()->write(json_encode(["error" => "Endpoint not found"]));
 		return $response
 			->withHeader('Content-Type', 'application/json')
 			->withStatus(404);
 	}
 );
 
-// Run app
+// Run the application
 $app->run();
