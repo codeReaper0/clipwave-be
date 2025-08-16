@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: clipwave-backend
+    runtime: docker
+    region: oregon # or your preferred region
+    plan: standard # or "free" for testing
+
+    # Essential configuration only
+    env: production # Uses all variables from dashboard
+    healthCheckPath: /health
+    autoDeploy: true
+
+    # Database link (if using Render's managed DB)
+    databases:
+      - name: clipwave-db
