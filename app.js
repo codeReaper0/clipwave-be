@@ -7,6 +7,7 @@ const CORSMiddleware = require("./middleware/CORSMiddleware");
 const SignatureController = require("./controllers/SignatureController");
 
 const app = express();
+const setupSwagger = require("./swagger");
 
 // Middleware
 app.use(express.json());
@@ -14,9 +15,11 @@ app.use(cors());
 app.use(CORSMiddleware);
 
 // Basic routes
-app.get("/", (req, res) => {
-  res.send(`Backend is running! | ${new Date().toISOString()}`);
-});
+setupSwagger(app);
+
+// app.get("/", (req, res) => {
+//   res.send(`Backend is running! | ${new Date().toISOString()}`);
+// });
 
 app.get("/test", (req, res) => {
   res.send("Test successful");

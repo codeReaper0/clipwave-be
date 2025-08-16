@@ -1,0 +1,595 @@
+openapi: 3.0.0
+info:
+  title: CLIPWAVE API
+  version: 1.0.0
+  description: |-
+    Backend API documentation for CLIPWAVE application.
+    Includes user management, video uploads, comments, and likes functionality.
+  contact:
+    name: API Support
+    email: support@clipwave.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+  - url: https://clipwave-backend-fue2eyddgwd8akbw.uksouth-01.azurewebsites.net
+    description: Production server
+
+tags:
+  - name: Users
+    description: User authentication and management
+  - name: Videos
+    description: Video upload and management
+  - name: Comments
+    description: Video comments
+  - name: Likes
+    description: Video likes functionality
+  - name: Cloudinary
+    description: Cloudinary upload signatures
+
+paths:
+  /users/signup:
+    post:
+      tags: [Users]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserSignup"
+      responses:
+        "200":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/login:
+    post:
+      tags: [Users]
+      summary: Authenticate a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLogin"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/videos/upload:
+    post:
+      tags: [Videos]
+      summary: Upload a new video
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoUpload"
+      responses:
+        "201":
+          description: Video uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/videos/{id}:
+    get:
+      tags: [Videos]
+      summary: Get video details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Video ID
+      responses:
+        "200":
+          description: Video details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoDetails"
+        "404":
+          description: Video not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/comments/add:
+    post:
+      tags: [Comments]
+      summary: Add a comment to a video
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentCreate"
+      responses:
+        "200":
+          description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommentResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/signature:
+    post:
+      tags: [Cloudinary]
+      summary: Generate Cloudinary upload signature
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignatureRequest"
+      responses:
+        "200":
+          description: Signature generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignatureResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /likes/toggle:
+    post:
+      tags: [Likes]
+      summary: Toggle like on a video
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LikeToggleRequest"
+      responses:
+        "200":
+          description: Like status toggled successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LikeToggleResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /likes/get/likes/count/{video_id}:
+    get:
+      tags: [Likes]
+      summary: Get like count for a video
+      parameters:
+        - in: path
+          name: video_id
+          required: true
+          schema:
+            type: string
+          description: ID of the video
+      responses:
+        "200":
+          description: Like count retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LikeCountResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /likes/has-liked/{user_id}/{video_id}:
+    get:
+      tags: [Likes]
+      summary: Check if user has liked a video
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+          description: ID of the user
+        - in: path
+          name: video_id
+          required: true
+          schema:
+            type: string
+          description: ID of the video
+      responses:
+        "200":
+          description: Like status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HasLikedResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /likes/get/user/whoLiked/{video_id}:
+    get:
+      tags: [Likes]
+      summary: Get users who liked a video
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: video_id
+          required: true
+          schema:
+            type: string
+          description: ID of the video
+      responses:
+        "200":
+          description: List of users retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsersWhoLikedResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UserSignup:
+      type: object
+      required: [username, email, password, role]
+      properties:
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: securePassword123
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+
+    UserLogin:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          example: johndoe
+        password:
+          type: string
+          format: password
+          example: securePassword123
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT authentication token
+        user:
+          $ref: "#/components/schemas/UserProfile"
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        username:
+          type: string
+          example: johndoe
+        email:
+          type: string
+          example: john@example.com
+        role:
+          type: string
+          example: user
+        created_at:
+          type: string
+          format: date-time
+
+    VideoUpload:
+      type: object
+      required: [cloudinaryId, url]
+      properties:
+        cloudinaryId:
+          type: string
+          description: Cloudinary public ID
+        title:
+          type: string
+          example: My Awesome Video
+        description:
+          type: string
+          example: This is a description of my video
+        genre:
+          type: string
+          example: entertainment
+        age_rating:
+          type: string
+          example: PG
+        publisher:
+          type: string
+          example: VID-DROP Studios
+        producer:
+          type: string
+          example: John Doe
+        duration:
+          type: number
+          example: 360
+        format:
+          type: string
+          example: mp4
+        url:
+          type: string
+          format: uri
+          description: Direct video URL
+
+    VideoResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        video:
+          $ref: "#/components/schemas/VideoDetails"
+
+    VideoDetails:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        video_url:
+          type: string
+          format: uri
+        hls_url:
+          type: string
+          format: uri
+        thumbnail_url:
+          type: string
+          format: uri
+        uploaded_at:
+          type: string
+          format: date-time
+
+    CommentCreate:
+      type: object
+      required: [content, user_id, video_id]
+      properties:
+        content:
+          type: string
+          example: This video is amazing!
+        user_id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+        video_id:
+          type: string
+          example: 607f1f77bcf86cd799439022
+
+    CommentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        comment:
+          type: object
+          properties:
+            id:
+              type: string
+            video_id:
+              type: string
+            user_id:
+              type: string
+            comment_text:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+        comment_count:
+          type: integer
+          example: 5
+
+    SignatureRequest:
+      type: object
+      properties:
+        upload_preset:
+          type: string
+          example: ml_default
+        title:
+          type: string
+          example: My Video Title
+        description:
+          type: string
+          example: My Video Description
+
+    SignatureResponse:
+      type: object
+      properties:
+        signature:
+          type: string
+        timestamp:
+          type: integer
+        api_key:
+          type: string
+        cloud_name:
+          type: string
+        upload_preset:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error description
+        code:
+          type: integer
+          example: 400
+
+    LikeToggleRequest:
+      type: object
+      required: [video_id, user_id]
+      properties:
+        video_id:
+          type: string
+          example: 607f1f77bcf86cd799439022
+        user_id:
+          type: string
+          example: 507f1f77bcf86cd799439011
+
+    LikeToggleResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Liked successfully
+        is_liked:
+          type: boolean
+          example: true
+        likes_count:
+          type: integer
+          example: 42
+
+    LikeCountResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: likes count retrieved successfully
+        data:
+          type: object
+          properties:
+            video_id:
+              type: string
+              example: 607f1f77bcf86cd799439022
+            likes_count:
+              type: integer
+              example: 42
+
+    HasLikedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        video_id:
+          type: string
+          example: 607f1f77bcf86cd799439022
+        liked:
+          type: boolean
+          example: true
+
+    UsersWhoLikedResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            example: 507f1f77bcf86cd799439011
+          username:
+            type: string
+            example: johndoe
