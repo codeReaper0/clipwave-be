@@ -3,8 +3,13 @@
 # Navigate to site root
 cd /home/site/wwwroot
 
-# Use Azure's assigned port, default to 8080 if not set
-PORT=${PORT:-8080}
+# Use Azure's assigned port
+SERVER_PORT=${PORT:-8080}
 
-# Start PHP built-in server with Slim's router
-php -S 0.0.0.0:$PORT -t public public/index.php
+# For debugging
+echo "Starting server on port $SERVER_PORT" > startup.log
+printenv >> startup.log
+
+# Start PHP server (only for development/testing)
+# Point to your actual front controller (index.php)
+exec php -S 0.0.0.0:$SERVER_PORT -t /home/site/wwwroot /home/site/wwwroot/index.php
