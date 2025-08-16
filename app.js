@@ -14,13 +14,7 @@ app.use(express.json());
 app.use(cors());
 app.use(CORSMiddleware);
 
-// Basic routes
-setupSwagger(app);
-
-// app.get("/", (req, res) => {
-//   res.send(`Backend is running! | ${new Date().toISOString()}`);
-// });
-
+// Your custom API routes first
 app.get("/test", (req, res) => {
   res.send("Test successful");
 });
@@ -48,7 +42,10 @@ app.get("/health", (req, res) => {
   res.send("OK");
 });
 
-// 404 handler
+// Now, set up Swagger. This is important to do *after* your primary routes.
+setupSwagger(app);
+
+// 404 handler (This should always be the last middleware)
 app.use((req, res) => {
   res.status(404).json({error: "Not Found"});
 });
