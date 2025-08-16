@@ -45,6 +45,10 @@ $app->get('/', function (Request $request, Response $response) {
 	return $response;
 });
 
+$app->get('/test', function (Request $request, Response $response) {
+	return $response->getBody()->write("Test successful");
+});
+
 // Debug route
 $app->get('/debug', function (Request $request, Response $response) use ($app) {
 	$routes = [];
