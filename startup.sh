@@ -1,15 +1,18 @@
 #!/bin/bash
 
-# Navigate to site root
-cd /home/site/wwwroot
-
 # Use Azure's assigned port
 SERVER_PORT=${PORT:-8080}
 
-# For debugging
-echo "Starting server on port $SERVER_PORT" > startup.log
-printenv >> startup.log
+# Generate nginx config with the correct port
+cat > /etc/nginx/conf.d/default.conf <<EOF
+server {
+    listen ${SERVER_PORT};
+    # Rest of your nginx config...
+}
+EOF
 
-# Start PHP server (only for development/testing)
-# Point to your actual front controller (index.php)
-exec php -S 0.0.0.0:$SERVER_PORT -t /home/site/wwwroot /home/site/wwwroot/index.php
+# Start PHP-FPM (running on port 9000 - no conflict)
+/usr/sbin/php-fpm
+
+# Start Nginx (will use the port from environment variable)
+exec /usr/sbin/nginx -g 'daemon off;'
