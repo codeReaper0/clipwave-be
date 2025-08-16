@@ -6,6 +6,7 @@ use Slim\Exception\HttpNotFoundException;
 
 require __DIR__ . '/vendor/autoload.php';
 
+// Load environment variables
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->safeLoad();
 
@@ -15,9 +16,9 @@ $app = AppFactory::create();
 // Add error middleware
 $app->addErrorMiddleware(true, true, true);
 
-// Single CORS middleware that handles both preflight and regular requests
+// CORS middleware
 $app->add(function (Request $request, $handler) {
-	// Handle preflight OPTIONS requests
+	// Handle OPTIONS requests
 	if ($request->getMethod() === 'OPTIONS') {
 		$response = new \Slim\Psr7\Response();
 		return $response
@@ -26,7 +27,7 @@ $app->add(function (Request $request, $handler) {
 			->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
 	}
 
-	// Handle regular requests
+	// Process regular requests
 	$response = $handler->handle($request);
 	return $response
 		->withHeader('Access-Control-Allow-Origin', '*')
@@ -34,36 +35,34 @@ $app->add(function (Request $request, $handler) {
 		->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
 });
 
-// Remove this duplicate OPTIONS route - it's now handled by the middleware above
-// $app->options('/{routes:.+}', function (Request $request, Response $response) {
-//     return $response;
-// });
-
-// Basic route
+// Basic route - plain text response
 $app->get('/', function (Request $request, Response $response) {
-	$response->getBody()->write("Backend is running!");
+	$response->getBody()->write("Backend is running! | " . date('Y-m-d H:i:s'));
 	return $response;
 });
 
+// Test route
 $app->get('/test', function (Request $request, Response $response) {
-	return $response->getBody()->write("Test successful");
+	$response->getBody()->write("Test successful");
+	return $response;
 });
 
-// Debug route
+// Debug route - plain text output
 $app->get('/debug', function (Request $request, Response $response) use ($app) {
-	$routes = [];
-	foreach ($app->getRouteCollector()->getRoutes() as $route) {
-		$routes[] = $route->getPattern();
+	$output = "Registered Routes:\n";
+	$output .= "================\n";
+
+	foreach ($app->getRouteCollector()->getRoutes() as $index => $route) {
+		$output .= sprintf(
+			"%d. %s %s\n",
+			$index + 1,
+			implode('|', $route->getMethods()),
+			$route->getPattern()
+		);
 	}
 
-	$data = [
-		'status' => 'success',
-		'routes' => array_unique($routes),
-		'message' => 'Make sure to use POST for /users/login'
-	];
-
-	$response->getBody()->write(json_encode($data, JSON_PRETTY_PRINT));
-	return $response->withHeader('Content-Type', 'application/json');
+	$response->getBody()->write($output);
+	return $response;
 });
 
 // Load route files
@@ -72,16 +71,24 @@ $routeFiles = [
 ];
 
 foreach ($routeFiles as $routeFile) {
-	if (!file_exists($routeFile)) {
-		error_log("Route file not found: $routeFile");
-		continue;
+	if (file_exists($routeFile)) {
+		require $routeFile;
+		error_log("Loaded route file: " . basename($routeFile));
+	} else {
+		error_log("Route file not found: " . basename($routeFile));
 	}
-	require $routeFile;
 }
 
-// Catch-all route for 404 (excluding OPTIONS which is handled by middleware)
+// Health check endpoint
+$app->get('/health', function (Request $request, Response $response) {
+	$response->getBody()->write("OK");
+	return $response;
+});
+
+// Catch-all route for 404
 $app->map(['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], '/{routes:.+}', function (Request $request, Response $response) {
 	throw new HttpNotFoundException($request);
 });
 
+// Run application
 $app->run();
