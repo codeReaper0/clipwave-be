@@ -1,7 +1,13 @@
 #!/bin/bash
-set -e
 
-cd /home/site/wwwroot
+# Configure PHP
+echo "Configuring PHP..."
+echo "date.timezone = UTC" >> /usr/local/etc/php/conf.d/timezone.ini
 
-# Start nginx in the foreground
-nginx -c /home/site/wwwroot/nginx.conf -g "daemon off;"
+# Start PHP-FPM
+echo "Starting PHP-FPM..."
+php-fpm &
+
+# Start Nginx
+echo "Starting Nginx..."
+nginx -g 'daemon off;'
